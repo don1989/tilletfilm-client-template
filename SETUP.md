@@ -8,15 +8,25 @@ This template lets you spin up a personalized one-page brochure for every prospe
 
 You'll do this once, ever. After that every new client takes 2 minutes.
 
-1. **Install Claude Code** if you haven't already: <https://claude.com/claude-code>
-2. **Clone this template** to your Mac. In Claude Code, point it at this repo and let it run:
-   ```
-   git clone https://github.com/don1989/tilletfilm-poc.git ~/Documents/tilletfilm-poc
-   ```
-   Then open Claude Code in `~/Documents/tilletfilm-poc/`.
-3. **Run `/new-client` once.** The first time you run it, Claude will install everything it needs (Homebrew, GitHub CLI, etc.) for you. You'll be asked for two pieces of input — both unavoidable, both one-time:
-   - **Your Mac password** when Homebrew installs itself. Type it into the terminal.
-   - **A GitHub login code.** Claude will print an 8-character code; paste it into the browser tab that opens, click Authorize, come back.
+**1. Install Claude Code** if you haven't already: <https://claude.com/claude-code>
+
+**2. Download a copy of this template** to your Mac. This is a one-time download — you keep this folder forever and reuse it for every client. Open Terminal (⌘+Space → "Terminal" → Enter) and paste:
+
+```bash
+git clone https://github.com/don1989/tilletfilm-poc.git ~/Documents/tilletfilm-poc
+```
+
+That puts a folder called `tilletfilm-poc` in your Documents. Open Claude Code in that folder:
+
+```bash
+cd ~/Documents/tilletfilm-poc
+claude
+```
+
+**3. Run `/new-client` once.** The first time you run it, Claude will install everything else it needs (Homebrew, GitHub CLI) for you. You'll be asked for two pieces of input — both unavoidable, both one-time:
+
+- **Your Mac password** when Homebrew installs itself. Type it into the terminal.
+- **A GitHub login code.** Claude will print an 8-character code; paste it into the browser tab that opens, click Authorize, come back.
 
 You can quit out at any point during your first run. Setup is done.
 
