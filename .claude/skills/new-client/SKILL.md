@@ -1,236 +1,177 @@
 ---
 name: new-client
-description: Spin up a personalized brochure GitHub repo for one client. Use when the user wants to create a new Opening Scene site for a prospect — Claude asks for the client details, makes the repo, swaps the text + assets, pushes to GitHub, and enables GitHub Pages. No config file needed.
+description: Spin up a personalized brochure GitHub repo for one client. Use when the user wants to create a new Opening Scene site for a prospect. Claude asks for the client details, generates the repo from the GitHub template, swaps the text + intro video, pushes, and enables GitHub Pages — all from any folder Claude Code is opened in. No local template clone required.
 ---
 
 # new-client
 
-You are creating a personalized brochure repo from this template, end to end, by asking the user a few questions and then doing all the work yourself with tool calls. No JSON config, no separate script — just a conversation.
+You're creating a personalized brochure repo from the `don1989/tilletfilm-poc` GitHub **template repository**. The template is marked as a template on GitHub, so the GitHub API endpoint `POST /repos/{template_owner}/{template_repo}/generate` will create a fresh client repo with all the template files but no commit history.
 
-The template is a single-page site (`index.html` + `assets/`) currently filled in for one specific prospect ("Lee Liasi" of Tillett Film). Your job: produce a fresh repo with everything swapped for a new prospect, pushed to GitHub, with Pages enabled.
+This skill works from **any** folder the user has Claude Code opened in — it never relies on a local clone of the template.
 
-## Step 1 — Ask the details
+Constants you can use throughout:
+- Template source: `don1989/tilletfilm-poc`
+- The operator's organisation: read from `~/.claude/skills/new-client/config.json` → field `org`. If that file doesn't exist or has no `org`, ask the user "Which GitHub org should the brochure repos live under?" and save it for next time.
+- Working directory for the new repo: `~/Documents/brochures/<repoName>`
 
-Use the `AskUserQuestion` tool. Group sensibly; don't ask 10 questions in a row. Suggested flow:
-
-**Q1 — Client name.** "What's the prospect's full name?" (free-text via Other; you'll split on the space for first/last).
-
-**Q2 — Meeting details.** "When is the meeting? Day, date, time — e.g. `Friday, 16 May 2026, 2:30 PM EST`" (free-text).
-
-**Q3 — Repo name.** Suggest a default like `firstname-lastname-opening-scene` (lowercase, dashes) and ask if that's OK or they want a different one.
-
-> Repos are **always public** — GitHub Pages on free accounts only serves public repos. The brochure URL is technically discoverable, but in practice it's just `github.io/some-slug` with no inbound links. Don't ask about visibility.
-
-**Q4 — Intro video.** "Where's the personal intro video for this prospect? Any file path on this Mac (e.g. `~/Desktop/IMG_1234.mov`), any common format (.mp4, .mov, .m4v, .webm). Or say 'skip' to leave the placeholder for now."
-
-**Q5 — Studio / color overrides (optional).** Default is to skip. Only ask follow-ups if the user says they want non-default studio name, email, director, or brand colors.
-
-After collecting, **echo a one-line plan** back ("Creating sarah-johnson-opening-scene for Sarah Johnson, meeting Friday 16 May 2:30 PM EST, public, template assets — OK?") and wait for confirmation.
-
-## Step 2 — Install prerequisites (first run only)
-
-Most of the time this step is a no-op. But if anything is missing, the skill installs it for the user. Don't ask the user to open another terminal — do it here.
-
-Run this single check first to see what's missing:
+## Step 0 — Load (or ask + save) the org
 
 ```bash
-for c in brew git gh rsync; do printf "%s: " "$c"; command -v "$c" >/dev/null && echo OK || echo MISSING; done
-gh auth status 2>&1 | head -3 || true
+CFG="$HOME/.claude/skills/new-client/config.json"
+if [ -f "$CFG" ]; then
+  ORG=$(grep -o '"org"[[:space:]]*:[[:space:]]*"[^"]*"' "$CFG" | sed -E 's/.*"([^"]+)"$/\1/')
+fi
 ```
 
-Then handle each missing piece **in order**:
-
-### 2a. Homebrew (Mac only)
-If `brew` is missing and the platform is macOS (`uname -s` returns `Darwin`):
-
-> Tell the user: "I need to install Homebrew first. It'll ask for your Mac password — type it in this terminal and press Enter."
+If `$ORG` is empty, ask the user via `AskUserQuestion`: *"Which GitHub org should the brochure repos live under?"*. Then save:
 
 ```bash
-/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+mkdir -p ~/.claude/skills/new-client
+printf '{"org":"%s"}\n' "$ORG" > "$CFG"
 ```
 
-This is interactive (sudo password) — let it run, don't background it. After it finishes, Homebrew may print a line about adding itself to PATH (`eval "$(/opt/homebrew/bin/brew shellenv)"`). Run that line so the current shell sees `brew`.
+## Step 1 — Ask the per-client details
 
-On Linux, use the system package manager (`sudo apt-get install -y gh git rsync` or similar) instead of brew. Tell the user what command you're about to run and let them approve.
+Use `AskUserQuestion`. Group sensibly:
 
-### 2b. gh, git, rsync
-For anything still missing:
+**Q1 — Prospect's full name.** Free-text (e.g. "Sarah Johnson"). You split on the first space for first/last.
+
+**Q2 — Meeting day, date, time.** One free-text question — e.g. `Friday, 16 May 2026, 2:30 PM EST`. Parse into the three sub-values.
+
+**Q3 — Repo name.** Suggest `<firstname>-<lastname>-opening-scene` (lowercased, hyphenated). Confirm or override.
+
+**Q4 — Intro video.** Path to the personal 90-second video on this Mac (e.g. `~/Desktop/sarah-intro.mov`). Accept any common format (`.mp4`, `.mov`, `.m4v`, `.webm`). Or "skip".
+
+**Q5 — Studio / color overrides (optional).** Default to skip. Only follow up if the user wants non-default studio name, email, director, or brand colours.
+
+Echo a one-line plan and wait for confirmation before doing anything destructive.
+
+## Step 2 — Verify prerequisites (mostly a no-op after install)
 
 ```bash
-brew install gh git rsync       # Mac
-# or
-sudo apt-get update && sudo apt-get install -y gh git rsync   # Debian/Ubuntu
+command -v gh && command -v git && command -v perl && gh auth status
 ```
 
-### 2c. GitHub authentication
-If `gh auth status` fails:
+If any of these fail, the installer wasn't run. Tell the user to paste the installer prompt (see SETUP.md in the template repo). Stop.
 
-> Tell the user: "I need to log you in to GitHub. A browser tab will open — copy the 8-character code I show you, paste it into the page, and click Authorize. Come back here when done."
+## Step 3 — Generate the new repo from the template
 
 ```bash
-gh auth login --web --git-protocol https
+gh api -X POST repos/don1989/tilletfilm-poc/generate \
+  -f owner="$ORG" \
+  -f name="$REPO_NAME" \
+  -f description="Opening Scene brochure for $CLIENT_FULL" \
+  -F include_all_branches=false \
+  -F private=false
 ```
 
-Wait for it to finish. Verify with `gh auth status` before continuing.
+This creates `$ORG/$REPO_NAME` on GitHub with the template's files and a single initial commit. There's a brief moment where the repo exists but files aren't yet ready to clone — wait 3 seconds, then continue.
 
-### 2d. Determine the GitHub owner
-Once authenticated:
+If this call returns `404`, the template flag isn't set on `don1989/tilletfilm-poc`. Tell the user to toggle it at `https://github.com/don1989/tilletfilm-poc/settings` and stop.
+
+## Step 4 — Clone the generated repo locally for editing
 
 ```bash
-gh api user --jq .login
+mkdir -p ~/Documents/brochures
+TARGET_DIR="$HOME/Documents/brochures/$REPO_NAME"
+gh repo clone "$ORG/$REPO_NAME" "$TARGET_DIR"
+cd "$TARGET_DIR"
 ```
 
-Use that as `<owner>`. If the user mentioned wanting to push under an organization, ask which one.
+The clone gives us a working copy on disk for the edits. We push back when done.
 
-## Step 3 — Build the new repo locally
+## Step 5 — Swap the per-client strings in index.html
 
-The template lives at the current working directory. Create a sibling folder.
-
-```bash
-TEMPLATE_DIR="$(pwd)"
-TARGET_DIR="$(dirname "$(pwd)")/<repoName>"
-mkdir "$TARGET_DIR"
-rsync -a --exclude='.git/' --exclude='.claude/' --exclude='SETUP.md' \
-         "$TEMPLATE_DIR/" "$TARGET_DIR/"
-```
-
-No bulk asset copy is needed at this step — the template's `assets/` folder was just copied above (in the `rsync -a "$TEMPLATE_DIR/" "$TARGET_DIR/"` line). All studio-wide videos/images come along for free.
-
-The per-client intro video is handled later, in the "Swapping in the intro video" section below.
-
-## Step 4 — Swap the strings in index.html
-
-Use `Edit` with `replace_all: true` on `$TARGET_DIR/index.html`. **Order matters** — longest/most-specific patterns first so they don't get eaten by shorter ones:
+Use `Edit` with `replace_all: true` on `$TARGET_DIR/index.html`. **Order matters** — longest first so shorter patterns don't eat them:
 
 1. `Lee Liasi` → `<CLIENT_FULL>`
 2. `Liasi` → `<CLIENT_LAST>`
-3. `Charlie Tillett` → `<DIRECTOR_FULL>` (only if studio overridden)
-4. `charlie@tillettfilm.com` → `<STUDIO_EMAIL>` (only if studio overridden)
-5. `tillettfilm.com` → `<STUDIO_DOMAIN>` (only if studio overridden)
-6. `Tillett Film` → `<STUDIO_NAME>` (only if studio overridden)
-7. `Charlie` → `<DIRECTOR_FIRST>` (only if studio overridden)
+3. `Charlie Tillett` → `<DIRECTOR_FULL>` *(only if studio overridden)*
+4. `charlie@tillettfilm.com` → `<STUDIO_EMAIL>` *(only if overridden)*
+5. `tillettfilm.com` → `<STUDIO_DOMAIN>` *(only if overridden)*
+6. `Tillett Film` → `<STUDIO_NAME>` *(only if overridden)*
+7. `Charlie` → `<DIRECTOR_FIRST>` *(only if overridden)*
 8. `Lee` → `<CLIENT_FIRST>`
 9. `12 May 2026` → `<MEETING_DATE>`
 10. `10:00 AM GMT` → `<MEETING_TIME>`
 11. `Tuesday` → `<MEETING_DAY>`
 
-Skip steps 3–7 if the user didn't override studio defaults.
-
-For optional color overrides, also edit the `:root` block:
+For colour overrides, also edit the `:root` block:
 - `--bg: #ffffff;` → `--bg: <hex>;`
 - `--bg-alt: #f5f4f1;` → `--bg-alt: <hex>;`
 - `--bg-invert: #0a0a0a;` → `--bg-invert: <hex>;`
 - `--ink: #0a0a0a;` → `--ink: <hex>;`
 
-## Step 5 — Create the GitHub repo and push
+## Step 6 — Wire up the intro video (if provided)
+
+If the user gave a path in Q4:
+
+```bash
+[ -f "$INTRO_PATH" ] || { echo "Intro file not found, skipping"; }
+EXT="${INTRO_PATH##*.}"
+EXT="$(printf '%s' "$EXT" | tr '[:upper:]' '[:lower:]')"
+cp "$INTRO_PATH" "$TARGET_DIR/assets/intro.$EXT"
+```
+
+Then run this perl one-liner to swap the scene-02 placeholder for a real `<video>` tag and remove the dead alert handler:
+
+```bash
+INTRO_EXT="$EXT" perl -i -0777 -pe '
+  my $ext = $ENV{INTRO_EXT};
+  my $replacement =
+    qq{<video src="assets/intro.$ext" controls playsinline preload="metadata" } .
+    qq{id="introVideo" style="width:100%; aspect-ratio:16/9; background:#000; } .
+    qq{border-radius:12px; display:block;">Your browser does not support embedded video.</video>};
+  s~<div class="video-placeholder" id="introVideo">\s*<div class="play-button"></div>\s*<div class="video-caption">[^<]*</div>\s*</div>~$replacement~;
+  s~\s*// Video placeholder click\s*\n\s*document\.getElementById\(.introVideo.\)\?\.addEventListener\(.click., \(\) => \{[^}]*\}\);~~;
+' "$TARGET_DIR/index.html"
+```
+
+## Step 7 — Check the studio showreel
+
+```bash
+[ -f "$TARGET_DIR/assets/showreel.mp4" ] || echo "WARNING: closing scene reel missing"
+```
+
+If missing, tell the user the closing scene will be a black box and offer:
+- Provide a showreel path for this brochure (one-off, copy as `assets/showreel.mp4`)
+- Add it to the template repo for all future clients (commit to `don1989/tilletfilm-poc:main` — needs push permission)
+- Skip
+
+## Step 8 — Commit and push
 
 ```bash
 cd "$TARGET_DIR"
-git init -b main
-git add .
-git commit -m "Initial brochure for <CLIENT_FULL>"
-gh repo create "<owner>/<repoName>" --public
-gh repo set-default "<owner>/<repoName>"
-git remote add origin "https://github.com/<owner>/<repoName>.git"
-git push -u origin main
+git add -A
+git commit -m "Personalize for $CLIENT_FULL"
+git push
 ```
 
-If `gh repo create` supports `--source=. --push` in one call, prefer that.
-
-## Step 6 — Enable GitHub Pages
+## Step 9 — Enable GitHub Pages
 
 ```bash
-gh api -X POST "repos/<owner>/<repoName>/pages" \
+gh api -X POST "repos/$ORG/$REPO_NAME/pages" \
   -f "source[branch]=main" -f "source[path]=/" \
-  || gh api -X PUT "repos/<owner>/<repoName>/pages" \
+  || gh api -X PUT "repos/$ORG/$REPO_NAME/pages" \
        -f "source[branch]=main" -f "source[path]=/"
 ```
 
-(The first call fails if Pages was already enabled; the PUT fallback updates it.)
-
-## Step 7 — Report back
+## Step 10 — Report back
 
 Tell the user:
-- Live URL: `https://<owner>.github.io/<repoName>/` (allow ~1 minute for first build)
-- Repo URL: `https://github.com/<owner>/<repoName>`
-- Local folder path of the new repo
+- Live URL: `https://$ORG.github.io/$REPO_NAME/` (allow ~1 minute for first build)
+- Repo URL: `https://github.com/$ORG/$REPO_NAME`
+- Local working folder: `$TARGET_DIR`
 
-## How assets work
+## How assets work (for context if user asks)
 
-There are two layers:
-
-**Studio-wide assets** live in the template repo and are inherited by every new brochure. Don't touch them per client. They are:
-- `testimonial.mp4` + `testimonial-thumbnail.jpg` — the studio's testimonial
-- `work-brand-film.{mp4,jpg}` — example brand film
-- `work-event-film.{mp4,jpg}` — example event film
-- `work-founder-film.{mp4,jpg}` — example founder film
-- `showreel.mp4` — closing-scene reel (committed to the template once; see below if missing)
-
-**Per-client asset** is just one file:
-- `intro.mp4` (the 90-second personal note for *this* prospect)
-
-So the only asset you ever ask the user about per-client is the intro video.
-
-## Swapping in the intro video
-
-If the user provides a path in Q4:
-
-1. Verify the file exists: `[ -f "<path>" ]`.
-2. Get the extension: `ext="${path##*.}"` (lowercased).
-3. Copy into the new repo, keeping the extension: `cp "<path>" "$TARGET_DIR/assets/intro.${ext}"`.
-4. Edit `index.html` in the new repo to swap the placeholder block. Find:
-
-   ```
-           <div class="video-placeholder" id="introVideo">
-             <div class="play-button"></div>
-             <div class="video-caption">A note for <FIRST_NAME> · 1:32</div>
-           </div>
-   ```
-
-   *(Note: the FIRST_NAME and "1:32" duration in the caption will already be the new client's name by this point because Step 4 has run — but the duration "1:32" is a leftover guess. Don't worry about it; the whole block is being removed.)*
-
-   Replace with:
-
-   ```
-           <video src="assets/intro.<ext>" controls playsinline preload="metadata" id="introVideo" style="width:100%; aspect-ratio:16/9; background:#000; border-radius:12px; display:block;">
-             Your browser doesn't support embedded video.
-           </video>
-   ```
-
-5. Also remove the alert click-handler that's tied to the placeholder. Find and delete this block in the JS section:
-
-   ```
-     // Video placeholder click
-     document.getElementById('introVideo')?.addEventListener('click', () => {
-       alert('Replace this placeholder with a Vimeo/YouTube iframe or HTML5 <video> tag in the source.');
-     });
-   ```
-
-If the user said "skip", do nothing — the placeholder stays.
-
-## Showreel check
-
-After Step 3 (template copied), check whether the template's `assets/showreel.mp4` exists:
-
-```bash
-[ -f "$TEMPLATE_DIR/assets/showreel.mp4" ] && echo present || echo missing
-```
-
-If **missing**, warn the user:
-
-> "Heads up — `showreel.mp4` isn't in the template, so the closing scene of this brochure will show a black box. Two options:
-> 1. Give me a path to a showreel file now — I'll bake it into this client's brochure (one-off).
-> 2. Or I can drop a showreel into the template repo and commit it so every future brochure inherits it.
-> 3. Skip — I'll leave it broken for now."
-
-Handle the user's choice:
-- **One-off**: `cp <path> "$TARGET_DIR/assets/showreel.mp4"` (file extension always becomes `.mp4` since the template's HTML hardcodes `assets/showreel.mp4`; warn if their file isn't .mp4 and offer ffmpeg).
-- **Template-level**: copy into `$TEMPLATE_DIR/assets/showreel.mp4`, then in the template repo: `git add assets/showreel.mp4 && git commit -m "Add studio showreel" && git push`. Then also copy it into `$TARGET_DIR/assets/` so this client's brochure has it too.
-- **Skip**: continue.
+Two layers:
+- **Studio-wide** (testimonial, work films, showreel) — live in the template repo's `assets/` and are inherited by every generated brochure automatically. Update them once in `don1989/tilletfilm-poc` and every future client inherits the new version.
+- **Per-client** — just the intro video. The only file you ask the user for.
 
 ## Don't
 
-- Don't modify the template `index.html` directly — always edit the copy in `$TARGET_DIR`.
-- Don't commit anything to this template repo as part of the skill.
-- Don't push to a repo the user didn't approve in Step 1.
-- Don't proceed if `gh auth status` fails — stop and ask the user to authenticate first.
+- Don't try to run this from a local template clone — there isn't one. Use the GitHub API.
+- Don't push to `don1989/tilletfilm-poc` as part of a per-client run (template stays clean).
+- Don't proceed past Step 2 if `gh auth status` fails — stop and tell the user to re-run the installer.
+- Don't change the repo visibility to private — Pages only works on public repos with a free plan.
