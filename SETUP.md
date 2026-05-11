@@ -1,175 +1,78 @@
 # Setup — make a new client brochure in 2 minutes
 
-This template lets you spin up a personalized one-page brochure for every prospect, hosted free on GitHub Pages. No coding required.
-
-There are **two ways** to use it. Pick whichever feels easier.
+This template lets you spin up a personalized one-page brochure for every prospect, hosted free on GitHub Pages. The whole flow runs inside Claude Code — you never need to touch the terminal directly.
 
 ---
 
-## Option A — One command (recommended)
+## One-time setup
 
-You run a single command per client. Best if you're comfortable opening Terminal once a week.
+You'll do this once, ever. After that every new client takes 2 minutes.
 
-### One-time setup
+1. **Install Claude Code** if you haven't already: <https://claude.com/claude-code>
+2. **Clone this template** to your Mac. In Claude Code, point it at this repo and let it run:
+   ```
+   git clone https://github.com/don1989/tilletfilm-poc.git ~/Documents/tilletfilm-poc
+   ```
+   Then open Claude Code in `~/Documents/tilletfilm-poc/`.
+3. **Run `/new-client` once.** The first time you run it, Claude will install everything it needs (Homebrew, GitHub CLI, etc.) for you. You'll be asked for two pieces of input — both unavoidable, both one-time:
+   - **Your Mac password** when Homebrew installs itself. Type it into the terminal.
+   - **A GitHub login code.** Claude will print an 8-character code; paste it into the browser tab that opens, click Authorize, come back.
 
-Open Terminal (Mac: ⌘+Space → "Terminal" → Enter). Paste each block, press Enter, wait for it to finish before the next.
+You can quit out at any point during your first run. Setup is done.
 
-**1. Install Homebrew** (if you don't already have it):
+### Studio showreel (also one-time)
 
-```bash
-/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
-```
+Before your first real client, drop your studio showreel into this template repo as `assets/showreel.mp4` and commit it. From then on every brochure inherits it. Ask Claude to do it for you:
 
-**2. Install the tools the script needs:**
+> "Add this file as the studio showreel: `~/Desktop/showreel.mp4`"
 
-```bash
-brew install gh jq rsync git
-```
-
-**3. Log in to GitHub** (this opens your browser):
-
-```bash
-gh auth login
-```
-
-Choose: GitHub.com → HTTPS → Login with a web browser. Copy the code it shows, paste it in the browser tab that opens, click Authorize.
-
-**4. Get the template:**
-
-```bash
-cd ~/Documents
-git clone https://github.com/don1989/tilletfilm-poc.git
-cd tilletfilm-poc
-```
-
-You only do steps 1–4 once. Done.
-
-### One-time studio setup: showreel
-
-Before your first client, drop your studio showreel into the template repo as `assets/showreel.mp4`, then commit it. From now on every brochure inherits it.
-
-```bash
-cd ~/Documents/tilletfilm-poc
-cp /path/to/your/showreel.mp4 assets/showreel.mp4
-git add assets/showreel.mp4
-git commit -m "Add studio showreel"
-git push
-```
-
-Same goes for the studio testimonials and work films — they're already in `assets/` from the template, but you can swap them once and every future brochure will use the new versions.
-
-### Every new client
-
-The only file that changes per client is the **personal intro video** — the 90-second note you record for that specific prospect. Everything else (testimonial, work films, showreel) is shared across all clients and lives in the template.
-
-**1. Have the intro video on your Mac somewhere.** Any filename, any common format works (.mp4, .mov, .m4v). For example `~/Desktop/sarah-intro.mov` straight off your phone via AirDrop.
-
-**2. Copy the example config and fill it in:**
-
-```bash
-cd ~/Documents/tilletfilm-poc
-cp client.config.example.json clients/sarah-johnson.json
-open clients/sarah-johnson.json
-```
-
-Edit the fields:
-
-```json
-{
-  "client": {
-    "firstName": "Sarah",
-    "lastName": "Johnson",
-    "meetingDay": "Friday",
-    "meetingDate": "16 May 2026",
-    "meetingTime": "2:30 PM EST"
-  },
-  "studio": {
-    "name": "Tillett Film",
-    "directorFirstName": "Charlie",
-    "directorFullName": "Charlie Tillett",
-    "domain": "tillettfilm.com",
-    "email": "charlie@tillettfilm.com"
-  },
-  "github": {
-    "owner": "don1989",
-    "repoName": "sarah-johnson-opening-scene"
-  },
-  "introVideo": "/Users/YOUR-USERNAME/Desktop/sarah-intro.mov"
-}
-```
-
-Save and close.
-
-**3. Run the script:**
-
-```bash
-bash scripts/new-client.sh clients/sarah-johnson.json
-```
-
-That's it. The script will print the live URL at the end — something like `https://don1989.github.io/sarah-johnson-opening-scene/`. Wait ~1 minute for GitHub to build the page the first time, then send the link to your client.
-
-### Customizing colors (optional)
-
-Add a `colors` block to the config to override the four brand tokens:
-
-```json
-"colors": {
-  "bg": "#ffffff",
-  "bgAlt": "#f5f4f1",
-  "bgInvert": "#0a0a0a",
-  "ink": "#0a0a0a"
-}
-```
-
-Omit it to keep the Tillett Film defaults.
+Claude will copy it into `assets/`, commit, and push. Same trick if you ever want to update the testimonial or work films — replace the file in `assets/`, commit, done.
 
 ---
 
-## Option B — Through Claude Code (simplest)
+## Every new client
 
-If you're using Claude Code in this folder, just type:
+In Claude Code, in the template folder:
 
 ```
 /new-client
 ```
 
-The very first time you run it, Claude will install everything it needs (Homebrew, the GitHub CLI, etc.) and log you in to GitHub. You'll be asked twice for input you can't avoid:
+Claude asks you, one at a time:
 
-1. **Mac password** — when Homebrew installs itself. Type it into the terminal.
-2. **GitHub login** — Claude will print an 8-character code and open `github.com/login/device` in your browser. Paste the code, click Authorize, come back.
+1. **Prospect's full name** — e.g. *Sarah Johnson*
+2. **Meeting day, date, time** — e.g. *Friday, 16 May 2026, 2:30 PM EST*
+3. **Repo name** — Claude suggests `sarah-johnson-opening-scene`; accept or change.
+4. **Intro video path** — wherever the 90-second personal video is on your Mac. Any filename. Any common format (`.mp4`, `.mov`, `.m4v`). For example `~/Desktop/sarah-intro.mov` straight off your phone via AirDrop. Or say *skip* and Claude leaves the placeholder.
+5. **Anything custom?** — by default Claude uses your studio name, email, director, and brand colors. Only answer if you want to override.
 
-Both of those happen once, ever. Every run after that, Claude jumps straight to the questions.
+Then Claude does the rest itself: copies the template, swaps every name and date in `index.html`, copies your intro video in, wires up scene 02, creates the GitHub repo, pushes, and turns on GitHub Pages. At the end it prints the live URL — something like `https://don1989.github.io/sarah-johnson-opening-scene/`.
 
-Then Claude asks you the per-client details (name, meeting day/date/time, repo name, where the videos are) one at a time, and does everything itself: copy the template, swap the names, copy your videos in, create the GitHub repo, push, and turn on Pages. **No config file. No commands to remember.**
+Wait ~1 minute for GitHub to build the page the first time, then send the link.
 
-> All brochure repos are created **public** because free GitHub Pages only serves public repos. The URL is `https://your-username.github.io/some-slug/` with no inbound links — only people you send the link to will find it.
+> All brochure repos are created **public** — free GitHub Pages only serves public repos. The URL has no inbound links, so it's only discoverable by people you send it to.
 
 ---
 
-## What does the script actually do?
+## How assets work
 
-1. Reads your config.
-2. Makes a fresh copy of this template in a sibling folder (e.g. `~/Documents/sarah-johnson-opening-scene/`).
-3. Find-and-replaces every "Lee Liasi", "Tuesday", "12 May 2026", etc. with your client's values.
-4. Copies your client's video/image files into the `assets/` folder.
-5. Creates a brand new GitHub repo under your account.
-6. Pushes the site.
-7. Turns on GitHub Pages, so the site is live at `https://YOUR-USERNAME.github.io/REPO-NAME/`.
+Two layers:
 
-The original template repo is **never touched** — every client gets their own clean repo.
+- **Studio-wide** (testimonial, work films, showreel) — live in this template repo's `assets/`. Every new brochure inherits them. Update them once, here, and every future brochure picks up the new version on its next build.
+- **Per-client** — just the intro video. The only file Claude asks you for.
+
+So the only thing you wrangle per prospect is one 90-second video.
 
 ---
 
 ## Troubleshooting
 
-**"command not found: gh"** — you skipped step 2 above. Run `brew install gh jq rsync git`.
+**The `/new-client` slash command doesn't appear** — make sure you opened Claude Code in the template folder (`~/Documents/tilletfilm-poc/`), not the home folder. Claude looks for skills in `.claude/skills/` relative to where it was launched.
 
-**"GitHub CLI is not authenticated"** — run `gh auth login` and follow the browser flow.
+**The site shows 404 after Claude finishes** — GitHub Pages takes about a minute to build on first deploy. Refresh in 60 seconds. If still broken after 5 minutes, ask Claude to check: it can hit the Pages settings via `gh api repos/OWNER/REPO/pages` and tell you what's wrong.
 
-**"Target directory already exists"** — you tried to use the same `repoName` twice. Either delete the old folder (`rm -rf ../sarah-johnson-opening-scene`) or pick a different name.
+**Intro video doesn't play on the client's site** — most likely the file path you gave Claude was wrong, or the file is in a format the browser doesn't support (rare for `.mp4`, `.mov`, `.m4v`). Ask Claude to re-run the intro-video step with a different file.
 
-**The site shows 404 after the script finishes** — GitHub Pages takes about a minute to build on first deploy. Refresh in 60 seconds. If still broken after 5 minutes, go to `https://github.com/YOUR-USERNAME/REPO-NAME/settings/pages` and check the Source is set to "Deploy from a branch → main → / (root)".
+**The closing-scene reel is a black box** — you skipped the studio showreel setup above. Drop a `showreel.mp4` into the template's `assets/` folder, commit it, push. Future brochures will have it; this client's brochure can be fixed by asking Claude to copy the showreel into the already-created repo.
 
-**Intro video doesn't play on the client's site** — make sure your `introVideo` path in the config actually exists and points at a video file. Common formats (.mp4, .mov, .m4v) all work. If the closing-scene reel is broken, you skipped the one-time studio setup above — drop a `showreel.mp4` into the template's `assets/` folder and commit it.
-
-**The other videos (testimonial, work films) are stale** — those live in the template repo's `assets/`. Replace them there once and commit; every future brochure will use the new versions.
+**The other videos (testimonial, work films) are stale** — those live in the template repo's `assets/`. Ask Claude to replace them and commit; every future brochure will use the new versions.

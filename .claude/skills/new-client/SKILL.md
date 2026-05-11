@@ -90,8 +90,7 @@ The template lives at the current working directory. Create a sibling folder.
 TEMPLATE_DIR="$(pwd)"
 TARGET_DIR="$(dirname "$(pwd)")/<repoName>"
 mkdir "$TARGET_DIR"
-rsync -a --exclude='.git/' --exclude='scripts/' --exclude='.claude/' \
-         --exclude='client.config*.json' --exclude='SETUP.md' \
+rsync -a --exclude='.git/' --exclude='.claude/' --exclude='SETUP.md' \
          "$TEMPLATE_DIR/" "$TARGET_DIR/"
 ```
 
