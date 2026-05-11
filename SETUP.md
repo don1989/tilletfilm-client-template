@@ -126,9 +126,17 @@ Omit it to keep the Tillett Film defaults.
 
 ---
 
-## Option B — Through Claude Code
+## Option B — Through Claude Code (simplest)
 
-If you're using Claude Code, just type `/new-client` and answer the questions Claude asks you. It builds the config and runs the script for you. (You still need the one-time setup from Option A.)
+If you're using Claude Code in this folder, just type:
+
+```
+/new-client
+```
+
+Claude will ask you the details (client name, meeting day/date/time, repo name, where the videos are) one question at a time, then do everything itself: copy the template, swap the names, copy your videos in, create the GitHub repo, push, and turn on Pages. **No config file needed.**
+
+You still need the one-time installs from Option A (`brew install gh`, `gh auth login`) so Claude has the tools to do the GitHub work.
 
 ---
 
