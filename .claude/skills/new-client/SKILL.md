@@ -21,7 +21,7 @@ Use the `AskUserQuestion` tool. Group sensibly; don't ask 10 questions in a row.
 
 > Repos are **always public** — GitHub Pages on free accounts only serves public repos. The brochure URL is technically discoverable, but in practice it's just `github.io/some-slug` with no inbound links. Don't ask about visibility.
 
-**Q4 — Assets.** "Where are the client's videos/images? Either give me a folder path on this machine, or say 'use template assets'."
+**Q4 — Intro video.** "Where's the personal intro video for this prospect? Any file path on this Mac (e.g. `~/Desktop/IMG_1234.mov`), any common format (.mp4, .mov, .m4v, .webm). Or say 'skip' to leave the placeholder for now."
 
 **Q5 — Studio / color overrides (optional).** Default is to skip. Only ask follow-ups if the user says they want non-default studio name, email, director, or brand colors.
 
@@ -95,11 +95,9 @@ rsync -a --exclude='.git/' --exclude='scripts/' --exclude='.claude/' \
          "$TEMPLATE_DIR/" "$TARGET_DIR/"
 ```
 
-If the user supplied an assets folder, copy its contents into `$TARGET_DIR/assets/` (overwriting matching filenames):
+No bulk asset copy is needed at this step — the template's `assets/` folder was just copied above (in the `rsync -a "$TEMPLATE_DIR/" "$TARGET_DIR/"` line). All studio-wide videos/images come along for free.
 
-```bash
-rsync -a "<userAssetsDir>/" "$TARGET_DIR/assets/"
-```
+The per-client intro video is handled later, in the "Swapping in the intro video" section below.
 
 ## Step 4 — Swap the strings in index.html
 
@@ -158,18 +156,78 @@ Tell the user:
 - Repo URL: `https://github.com/<owner>/<repoName>`
 - Local folder path of the new repo
 
-## Asset filenames the template expects
+## How assets work
 
-If the user provides a folder, the videos/images inside must be named exactly:
+There are two layers:
 
-- `testimonial.mp4`, `testimonial-thumbnail.jpg`
-- `work-brand-film.mp4`, `work-brand-film.jpg`
-- `work-event-film.mp4`, `work-event-film.jpg`
-- `work-founder-film.mp4`, `work-founder-film.jpg`
-- `intro.mp4` (90-second personal note — optional but referenced)
-- `showreel.mp4` (closing reel — optional but referenced)
+**Studio-wide assets** live in the template repo and are inherited by every new brochure. Don't touch them per client. They are:
+- `testimonial.mp4` + `testimonial-thumbnail.jpg` — the studio's testimonial
+- `work-brand-film.{mp4,jpg}` — example brand film
+- `work-event-film.{mp4,jpg}` — example event film
+- `work-founder-film.{mp4,jpg}` — example founder film
+- `showreel.mp4` — closing-scene reel (committed to the template once; see below if missing)
 
-If their folder is missing some, offer to rename theirs to match, or to leave the template defaults in place.
+**Per-client asset** is just one file:
+- `intro.mp4` (the 90-second personal note for *this* prospect)
+
+So the only asset you ever ask the user about per-client is the intro video.
+
+## Swapping in the intro video
+
+If the user provides a path in Q4:
+
+1. Verify the file exists: `[ -f "<path>" ]`.
+2. Get the extension: `ext="${path##*.}"` (lowercased).
+3. Copy into the new repo, keeping the extension: `cp "<path>" "$TARGET_DIR/assets/intro.${ext}"`.
+4. Edit `index.html` in the new repo to swap the placeholder block. Find:
+
+   ```
+           <div class="video-placeholder" id="introVideo">
+             <div class="play-button"></div>
+             <div class="video-caption">A note for <FIRST_NAME> · 1:32</div>
+           </div>
+   ```
+
+   *(Note: the FIRST_NAME and "1:32" duration in the caption will already be the new client's name by this point because Step 4 has run — but the duration "1:32" is a leftover guess. Don't worry about it; the whole block is being removed.)*
+
+   Replace with:
+
+   ```
+           <video src="assets/intro.<ext>" controls playsinline preload="metadata" id="introVideo" style="width:100%; aspect-ratio:16/9; background:#000; border-radius:12px; display:block;">
+             Your browser doesn't support embedded video.
+           </video>
+   ```
+
+5. Also remove the alert click-handler that's tied to the placeholder. Find and delete this block in the JS section:
+
+   ```
+     // Video placeholder click
+     document.getElementById('introVideo')?.addEventListener('click', () => {
+       alert('Replace this placeholder with a Vimeo/YouTube iframe or HTML5 <video> tag in the source.');
+     });
+   ```
+
+If the user said "skip", do nothing — the placeholder stays.
+
+## Showreel check
+
+After Step 3 (template copied), check whether the template's `assets/showreel.mp4` exists:
+
+```bash
+[ -f "$TEMPLATE_DIR/assets/showreel.mp4" ] && echo present || echo missing
+```
+
+If **missing**, warn the user:
+
+> "Heads up — `showreel.mp4` isn't in the template, so the closing scene of this brochure will show a black box. Two options:
+> 1. Give me a path to a showreel file now — I'll bake it into this client's brochure (one-off).
+> 2. Or I can drop a showreel into the template repo and commit it so every future brochure inherits it.
+> 3. Skip — I'll leave it broken for now."
+
+Handle the user's choice:
+- **One-off**: `cp <path> "$TARGET_DIR/assets/showreel.mp4"` (file extension always becomes `.mp4` since the template's HTML hardcodes `assets/showreel.mp4`; warn if their file isn't .mp4 and offer ffmpeg).
+- **Template-level**: copy into `$TEMPLATE_DIR/assets/showreel.mp4`, then in the template repo: `git add assets/showreel.mp4 && git commit -m "Add studio showreel" && git push`. Then also copy it into `$TARGET_DIR/assets/` so this client's brochure has it too.
+- **Skip**: continue.
 
 ## Don't
 

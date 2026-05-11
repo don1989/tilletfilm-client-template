@@ -44,25 +44,25 @@ cd tilletfilm-poc
 
 You only do steps 1–4 once. Done.
 
+### One-time studio setup: showreel
+
+Before your first client, drop your studio showreel into the template repo as `assets/showreel.mp4`, then commit it. From now on every brochure inherits it.
+
+```bash
+cd ~/Documents/tilletfilm-poc
+cp /path/to/your/showreel.mp4 assets/showreel.mp4
+git add assets/showreel.mp4
+git commit -m "Add studio showreel"
+git push
+```
+
+Same goes for the studio testimonials and work films — they're already in `assets/` from the template, but you can swap them once and every future brochure will use the new versions.
+
 ### Every new client
 
-**1. Make a folder for the client's videos** (anywhere on your Mac):
+The only file that changes per client is the **personal intro video** — the 90-second note you record for that specific prospect. Everything else (testimonial, work films, showreel) is shared across all clients and lives in the template.
 
-```
-~/Documents/clients/sarah-johnson/
-├── testimonial.mp4
-├── testimonial-thumbnail.jpg
-├── work-brand-film.mp4
-├── work-brand-film.jpg
-├── work-event-film.mp4
-├── work-event-film.jpg
-├── work-founder-film.mp4
-├── work-founder-film.jpg
-├── intro.mp4          (the 90-second personal note)
-└── showreel.mp4       (the closing reel)
-```
-
-**The filenames must match exactly** — that's how the brochure finds them.
+**1. Have the intro video on your Mac somewhere.** Any filename, any common format works (.mp4, .mov, .m4v). For example `~/Desktop/sarah-intro.mov` straight off your phone via AirDrop.
 
 **2. Copy the example config and fill it in:**
 
@@ -94,7 +94,7 @@ Edit the fields:
     "owner": "don1989",
     "repoName": "sarah-johnson-opening-scene"
   },
-  "assetsDir": "/Users/YOUR-USERNAME/Documents/clients/sarah-johnson"
+  "introVideo": "/Users/YOUR-USERNAME/Desktop/sarah-intro.mov"
 }
 ```
 
@@ -170,4 +170,6 @@ The original template repo is **never touched** — every client gets their own 
 
 **The site shows 404 after the script finishes** — GitHub Pages takes about a minute to build on first deploy. Refresh in 60 seconds. If still broken after 5 minutes, go to `https://github.com/YOUR-USERNAME/REPO-NAME/settings/pages` and check the Source is set to "Deploy from a branch → main → / (root)".
 
-**Videos don't play on the client's site** — the filenames in your assets folder must match exactly. See the list under "Make a folder for the client's videos" above.
+**Intro video doesn't play on the client's site** — make sure your `introVideo` path in the config actually exists and points at a video file. Common formats (.mp4, .mov, .m4v) all work. If the closing-scene reel is broken, you skipped the one-time studio setup above — drop a `showreel.mp4` into the template's `assets/` folder and commit it.
+
+**The other videos (testimonial, work films) are stale** — those live in the template repo's `assets/`. Replace them there once and commit; every future brochure will use the new versions.

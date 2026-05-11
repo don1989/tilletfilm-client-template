@@ -78,7 +78,7 @@ GH_OWNER=$(read_cfg '.github.owner')
 REPO_NAME=$(read_cfg '.github.repoName')
 # Always public — GitHub Pages on free accounts requires a public repo.
 
-ASSETS_DIR=$(read_cfg '.assetsDir // ""')
+INTRO_VIDEO=$(read_cfg '.introVideo // ""')
 
 # ---------- validate ----------
 for v in CLIENT_FIRST CLIENT_LAST MEETING_DAY MEETING_DATE MEETING_TIME \
@@ -111,14 +111,31 @@ rsync -a \
   --exclude='SETUP.md' \
   "$TEMPLATE_DIR/" "$TARGET_DIR/"
 
-# ---------- copy client assets ----------
-if [ -n "$ASSETS_DIR" ] && [ -d "$ASSETS_DIR" ]; then
-  echo "==> Copying client assets from $ASSETS_DIR"
-  mkdir -p "$TARGET_DIR/assets"
-  # Only copy files that exist; preserves template assets as fallback
-  rsync -a "$ASSETS_DIR/" "$TARGET_DIR/assets/"
-elif [ -n "$ASSETS_DIR" ]; then
-  echo "WARNING: assetsDir '$ASSETS_DIR' does not exist; keeping template assets." >&2
+# ---------- copy per-client intro video (if provided) ----------
+# Studio-wide assets (testimonial, work films, showreel) were already
+# included in the rsync above. The only per-client asset is intro.<ext>.
+INTRO_EXT=""
+if [ -n "$INTRO_VIDEO" ]; then
+  if [ ! -f "$INTRO_VIDEO" ]; then
+    echo "WARNING: introVideo path '$INTRO_VIDEO' not found; scene 02 will keep its placeholder." >&2
+    INTRO_VIDEO=""
+  else
+    # Lowercase extension
+    INTRO_EXT="${INTRO_VIDEO##*.}"
+    INTRO_EXT="$(printf '%s' "$INTRO_EXT" | tr '[:upper:]' '[:lower:]')"
+    echo "==> Copying intro video to assets/intro.${INTRO_EXT}"
+    cp "$INTRO_VIDEO" "$TARGET_DIR/assets/intro.${INTRO_EXT}"
+  fi
+fi
+
+# ---------- showreel check ----------
+if [ ! -f "$TARGET_DIR/assets/showreel.mp4" ]; then
+  echo ""
+  echo "WARNING: assets/showreel.mp4 is not in the template — the closing scene"
+  echo "         of every brochure (including this one) will show a black box."
+  echo "         To fix once for all future clients, drop a showreel.mp4 into"
+  echo "         the template repo's assets/ folder and commit it."
+  echo ""
 fi
 
 # ---------- text replacements in index.html ----------
@@ -176,6 +193,24 @@ sed_inplace "s/--bg-invert: #0a0a0a;/--bg-invert: $(esc "$COLOR_BG_INVERT");/"
 sed_inplace "s/--ink: #0a0a0a;/--ink: $(esc "$COLOR_INK");/"
 
 echo "==> Text replacements complete"
+
+# ---------- swap scene-02 placeholder for a real <video> tag ----------
+# Only if the user supplied an intro video. Uses perl in slurp mode so
+# the multi-line block can be matched without any extra dependencies
+# (perl ships on macOS and most Linux distros).
+if [ -n "$INTRO_VIDEO" ] && [ -n "$INTRO_EXT" ]; then
+  echo "==> Wiring up scene 02 intro video"
+  INDEX_PATH="$INDEX" INTRO_EXT="$INTRO_EXT" perl -i -0777 -pe '
+    my $ext = $ENV{INTRO_EXT};
+    my $replacement =
+      qq{<video src="assets/intro.$ext" controls playsinline preload="metadata" } .
+      qq{id="introVideo" style="width:100%; aspect-ratio:16/9; background:#000; } .
+      qq{border-radius:12px; display:block;">Your browser does not support embedded video.</video>};
+    s~<div class="video-placeholder" id="introVideo">\s*<div class="play-button"></div>\s*<div class="video-caption">[^<]*</div>\s*</div>~$replacement~;
+    # Remove the dead click-handler alert too (use ~ as delimiter to avoid {} clash).
+    s~\s*// Video placeholder click\s*\n\s*document\.getElementById\(.introVideo.\)\?\.addEventListener\(.click., \(\) => \{[^}]*\}\);~~;
+  ' "$INDEX"
+fi
 
 # ---------- init git + create GH repo ----------
 cd "$TARGET_DIR"
