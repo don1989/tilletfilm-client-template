@@ -92,8 +92,7 @@ Edit the fields:
   },
   "github": {
     "owner": "don1989",
-    "repoName": "sarah-johnson-opening-scene",
-    "private": false
+    "repoName": "sarah-johnson-opening-scene"
   },
   "assetsDir": "/Users/YOUR-USERNAME/Documents/clients/sarah-johnson"
 }
@@ -134,9 +133,16 @@ If you're using Claude Code in this folder, just type:
 /new-client
 ```
 
-Claude will ask you the details (client name, meeting day/date/time, repo name, where the videos are) one question at a time, then do everything itself: copy the template, swap the names, copy your videos in, create the GitHub repo, push, and turn on Pages. **No config file needed.**
+The very first time you run it, Claude will install everything it needs (Homebrew, the GitHub CLI, etc.) and log you in to GitHub. You'll be asked twice for input you can't avoid:
 
-You still need the one-time installs from Option A (`brew install gh`, `gh auth login`) so Claude has the tools to do the GitHub work.
+1. **Mac password** — when Homebrew installs itself. Type it into the terminal.
+2. **GitHub login** — Claude will print an 8-character code and open `github.com/login/device` in your browser. Paste the code, click Authorize, come back.
+
+Both of those happen once, ever. Every run after that, Claude jumps straight to the questions.
+
+Then Claude asks you the per-client details (name, meeting day/date/time, repo name, where the videos are) one at a time, and does everything itself: copy the template, swap the names, copy your videos in, create the GitHub repo, push, and turn on Pages. **No config file. No commands to remember.**
+
+> All brochure repos are created **public** because free GitHub Pages only serves public repos. The URL is `https://your-username.github.io/some-slug/` with no inbound links — only people you send the link to will find it.
 
 ---
 

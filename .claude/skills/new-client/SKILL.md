@@ -17,7 +17,9 @@ Use the `AskUserQuestion` tool. Group sensibly; don't ask 10 questions in a row.
 
 **Q2 — Meeting details.** "When is the meeting? Day, date, time — e.g. `Friday, 16 May 2026, 2:30 PM EST`" (free-text).
 
-**Q3 — Repo name & visibility.** Two options: suggest a default like `firstname-lastname-opening-scene` (lowercase, dashes) and ask if that's OK or they want a different one. Then ask public vs private.
+**Q3 — Repo name.** Suggest a default like `firstname-lastname-opening-scene` (lowercase, dashes) and ask if that's OK or they want a different one.
+
+> Repos are **always public** — GitHub Pages on free accounts only serves public repos. The brochure URL is technically discoverable, but in practice it's just `github.io/some-slug` with no inbound links. Don't ask about visibility.
 
 **Q4 — Assets.** "Where are the client's videos/images? Either give me a folder path on this machine, or say 'use template assets'."
 
@@ -25,19 +27,60 @@ Use the `AskUserQuestion` tool. Group sensibly; don't ask 10 questions in a row.
 
 After collecting, **echo a one-line plan** back ("Creating sarah-johnson-opening-scene for Sarah Johnson, meeting Friday 16 May 2:30 PM EST, public, template assets — OK?") and wait for confirmation.
 
-## Step 2 — Verify prerequisites
+## Step 2 — Install prerequisites (first run only)
 
-Before touching anything, run:
+Most of the time this step is a no-op. But if anything is missing, the skill installs it for the user. Don't ask the user to open another terminal — do it here.
+
+Run this single check first to see what's missing:
 
 ```bash
-command -v gh && command -v git && command -v rsync && gh auth status
+for c in brew git gh rsync; do printf "%s: " "$c"; command -v "$c" >/dev/null && echo OK || echo MISSING; done
+gh auth status 2>&1 | head -3 || true
 ```
 
-If `gh` is missing: tell the user to install (`brew install gh` on Mac) and stop.
-If `gh auth status` fails: tell them to run `gh auth login` and stop.
-If `rsync` is missing on Linux: fall back to `cp -r` for the copy step.
+Then handle each missing piece **in order**:
 
-Determine the GitHub owner: run `gh api user --jq .login` and use that (or ask the user if they want to push under an org instead).
+### 2a. Homebrew (Mac only)
+If `brew` is missing and the platform is macOS (`uname -s` returns `Darwin`):
+
+> Tell the user: "I need to install Homebrew first. It'll ask for your Mac password — type it in this terminal and press Enter."
+
+```bash
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+```
+
+This is interactive (sudo password) — let it run, don't background it. After it finishes, Homebrew may print a line about adding itself to PATH (`eval "$(/opt/homebrew/bin/brew shellenv)"`). Run that line so the current shell sees `brew`.
+
+On Linux, use the system package manager (`sudo apt-get install -y gh git rsync` or similar) instead of brew. Tell the user what command you're about to run and let them approve.
+
+### 2b. gh, git, rsync
+For anything still missing:
+
+```bash
+brew install gh git rsync       # Mac
+# or
+sudo apt-get update && sudo apt-get install -y gh git rsync   # Debian/Ubuntu
+```
+
+### 2c. GitHub authentication
+If `gh auth status` fails:
+
+> Tell the user: "I need to log you in to GitHub. A browser tab will open — copy the 8-character code I show you, paste it into the page, and click Authorize. Come back here when done."
+
+```bash
+gh auth login --web --git-protocol https
+```
+
+Wait for it to finish. Verify with `gh auth status` before continuing.
+
+### 2d. Determine the GitHub owner
+Once authenticated:
+
+```bash
+gh api user --jq .login
+```
+
+Use that as `<owner>`. If the user mentioned wanting to push under an organization, ask which one.
 
 ## Step 3 — Build the new repo locally
 
@@ -89,7 +132,7 @@ cd "$TARGET_DIR"
 git init -b main
 git add .
 git commit -m "Initial brochure for <CLIENT_FULL>"
-gh repo create "<owner>/<repoName>" --public  # or --private
+gh repo create "<owner>/<repoName>" --public
 gh repo set-default "<owner>/<repoName>"
 git remote add origin "https://github.com/<owner>/<repoName>.git"
 git push -u origin main

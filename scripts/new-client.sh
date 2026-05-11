@@ -76,7 +76,7 @@ COLOR_INK=$(read_cfg '.colors.ink // "#0a0a0a"')
 
 GH_OWNER=$(read_cfg '.github.owner')
 REPO_NAME=$(read_cfg '.github.repoName')
-GH_PRIVATE=$(read_cfg '.github.private // false')
+# Always public — GitHub Pages on free accounts requires a public repo.
 
 ASSETS_DIR=$(read_cfg '.assetsDir // ""')
 
@@ -185,11 +185,8 @@ git -c user.email="${DIRECTOR_FULL// /.}@${STUDIO_DOMAIN}" \
     -c user.name="$DIRECTOR_FULL" \
     commit -m "Initial brochure for ${CLIENT_FULL}" >/dev/null
 
-VISIBILITY="--public"
-if [ "$GH_PRIVATE" = "true" ]; then VISIBILITY="--private"; fi
-
-echo "==> Creating GitHub repo $GH_OWNER/$REPO_NAME"
-gh repo create "$GH_OWNER/$REPO_NAME" $VISIBILITY \
+echo "==> Creating GitHub repo $GH_OWNER/$REPO_NAME (public — required for free GitHub Pages)"
+gh repo create "$GH_OWNER/$REPO_NAME" --public \
   --source=. --remote=origin --push \
   --description "Opening Scene brochure for ${CLIENT_FULL}"
 
