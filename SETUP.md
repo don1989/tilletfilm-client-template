@@ -23,9 +23,7 @@ Install the Tillett Film brochure-maker for me. You should:
    https://raw.githubusercontent.com/don1989/tilletfilm-poc/main/.claude/skills/new-client/SKILL.md
    and save it as `~/.claude/skills/new-client/SKILL.md`. (Use `curl -fsSL <url> -o <path>`.)
 
-6. Ask me which GitHub org the client brochure repos should live under (e.g. `tillettfilm`). Save my answer as `~/.claude/skills/new-client/config.json` with the content `{"org":"<my-answer>"}`.
-
-7. Pre-approve the Bash commands the skill will need so I don't have to click Allow on every run. In `~/.claude/settings.json`, merge in this `permissions.allow` block (preserve any existing rules):
+6. Pre-approve the Bash commands the skill will need so I don't have to click Allow on every run. In `~/.claude/settings.json`, merge in this `permissions.allow` block (preserve any existing rules):
 
    ```json
    {
@@ -46,7 +44,7 @@ Install the Tillett Film brochure-maker for me. You should:
    }
    ```
 
-8. Verify everything by running `gh auth status` and listing `~/.claude/skills/new-client/`. Tell me when `/new-client` is ready to use.
+7. Verify everything by running `gh auth status` and listing `~/.claude/skills/new-client/`. Tell me when `/new-client` is ready to use.
 ````
 
 You'll be asked twice during this run, both one-time:

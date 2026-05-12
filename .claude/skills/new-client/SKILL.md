@@ -11,24 +11,16 @@ This skill works from **any** folder the user has Claude Code opened in — it n
 
 Constants you can use throughout:
 - Template source: `don1989/tilletfilm-poc`
-- The operator's organisation: read from `~/.claude/skills/new-client/config.json` → field `org`. If that file doesn't exist or has no `org`, ask the user "Which GitHub org should the brochure repos live under?" and save it for next time.
+- The operator's GitHub username: read from `gh api user --jq .login`. Brochure repos are always created under his own account — there's no org.
 - Working directory for the new repo: `~/Documents/brochures/<repoName>`
 
-## Step 0 — Load (or ask + save) the org
+## Step 0 — Determine the owner
 
 ```bash
-CFG="$HOME/.claude/skills/new-client/config.json"
-if [ -f "$CFG" ]; then
-  ORG=$(grep -o '"org"[[:space:]]*:[[:space:]]*"[^"]*"' "$CFG" | sed -E 's/.*"([^"]+)"$/\1/')
-fi
+OWNER=$(gh api user --jq .login)
 ```
 
-If `$ORG` is empty, ask the user via `AskUserQuestion`: *"Which GitHub org should the brochure repos live under?"*. Then save:
-
-```bash
-mkdir -p ~/.claude/skills/new-client
-printf '{"org":"%s"}\n' "$ORG" > "$CFG"
-```
+That's where the new client repo will live (`$OWNER/$REPO_NAME`). If `gh api user` fails, `gh` isn't authenticated — tell the user to re-run the installer prompt and stop.
 
 ## Step 1 — Ask the per-client details
 
@@ -58,14 +50,14 @@ If any of these fail, the installer wasn't run. Tell the user to paste the insta
 
 ```bash
 gh api -X POST repos/don1989/tilletfilm-poc/generate \
-  -f owner="$ORG" \
+  -f owner="$OWNER" \
   -f name="$REPO_NAME" \
   -f description="Opening Scene brochure for $CLIENT_FULL" \
   -F include_all_branches=false \
   -F private=false
 ```
 
-This creates `$ORG/$REPO_NAME` on GitHub with the template's files and a single initial commit. There's a brief moment where the repo exists but files aren't yet ready to clone — wait 3 seconds, then continue.
+This creates `$OWNER/$REPO_NAME` on GitHub with the template's files and a single initial commit. There's a brief moment where the repo exists but files aren't yet ready to clone — wait 3 seconds, then continue.
 
 If this call returns `404`, the template flag isn't set on `don1989/tilletfilm-poc`. Tell the user to toggle it at `https://github.com/don1989/tilletfilm-poc/settings` and stop.
 
@@ -74,7 +66,7 @@ If this call returns `404`, the template flag isn't set on `don1989/tilletfilm-p
 ```bash
 mkdir -p ~/Documents/brochures
 TARGET_DIR="$HOME/Documents/brochures/$REPO_NAME"
-gh repo clone "$ORG/$REPO_NAME" "$TARGET_DIR"
+gh repo clone "$OWNER/$REPO_NAME" "$TARGET_DIR"
 cd "$TARGET_DIR"
 ```
 
@@ -150,17 +142,17 @@ git push
 ## Step 9 — Enable GitHub Pages
 
 ```bash
-gh api -X POST "repos/$ORG/$REPO_NAME/pages" \
+gh api -X POST "repos/$OWNER/$REPO_NAME/pages" \
   -f "source[branch]=main" -f "source[path]=/" \
-  || gh api -X PUT "repos/$ORG/$REPO_NAME/pages" \
+  || gh api -X PUT "repos/$OWNER/$REPO_NAME/pages" \
        -f "source[branch]=main" -f "source[path]=/"
 ```
 
 ## Step 10 — Report back
 
 Tell the user:
-- Live URL: `https://$ORG.github.io/$REPO_NAME/` (allow ~1 minute for first build)
-- Repo URL: `https://github.com/$ORG/$REPO_NAME`
+- Live URL: `https://$OWNER.github.io/$REPO_NAME/` (allow ~1 minute for first build)
+- Repo URL: `https://github.com/$OWNER/$REPO_NAME`
 - Local working folder: `$TARGET_DIR`
 
 ## How assets work (for context if user asks)
