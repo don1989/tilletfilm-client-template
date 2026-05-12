@@ -15,7 +15,7 @@ Install the Tillett Film client-site maker for me. You should:
 
 1. If `brew` (Homebrew) isn't installed on this Mac, install it from https://brew.sh/. This step needs my Mac password — you'll be prompted in the terminal pane, and I'll type it in.
 
-2. Use brew to install `gh` and `git` if they're not already present.
+2. Use brew to install `gh`, `git`, and `jq` if they're not already present.
 
 3. Run `gh auth login --web --git-protocol https` so I'm logged in to GitHub under my own account. Show me the 8-character device code and the URL — I'll paste the code into the browser and authorize.
 
@@ -38,25 +38,17 @@ Install the Tillett Film client-site maker for me. You should:
    https://raw.githubusercontent.com/don1989/tilletfilm-client-template/main/.claude/skills/new-client/SKILL.md
    and save it as `~/.claude/skills/new-client/SKILL.md`. (Use `curl -fsSL <url> -o <path>`.)
 
-10. Pre-approve the Bash commands the skill will need so I don't have to click Allow on every run. In `~/.claude/settings.json`, merge in this `permissions.allow` block (preserve any existing rules):
+10. Pre-approve the Bash commands the skill will need so I don't have to click Allow on every run. Use this exact `jq` invocation — do NOT use Python or any other JSON library — it preserves any existing rules and dedupes:
 
-    ```json
-    {
-      "permissions": {
-        "allow": [
-          "Bash(gh:*)",
-          "Bash(git:*)",
-          "Bash(brew install:*)",
-          "Bash(perl -i:*)",
-          "Bash(cp:*)",
-          "Bash(mkdir:*)",
-          "Bash(rsync:*)",
-          "Bash(test:*)",
-          "Bash([:*)",
-          "Bash(curl -fsSL:*)"
-        ]
-      }
-    }
+    ```bash
+    SETTINGS="$HOME/.claude/settings.json"
+    mkdir -p "$HOME/.claude"
+    [ -f "$SETTINGS" ] || echo '{}' > "$SETTINGS"
+    NEW_RULES='["Bash(gh:*)","Bash(git:*)","Bash(brew install:*)","Bash(perl -i:*)","Bash(cp:*)","Bash(mkdir:*)","Bash(rsync:*)","Bash(test:*)","Bash([:*)","Bash(curl -fsSL:*)","Bash(jq:*)"]'
+    jq --argjson rules "$NEW_RULES" '
+      .permissions = (.permissions // {}) |
+      .permissions.allow = ((.permissions.allow // []) + $rules | unique)
+    ' "$SETTINGS" > "$SETTINGS.tmp" && mv "$SETTINGS.tmp" "$SETTINGS"
     ```
 
 11. Verify everything: `gh auth status`, list `~/.claude/skills/new-client/`, list `~/Documents/tilletfilm-client-template/`, and confirm my template's `is_template` flag with `gh api repos/$LOGIN/tilletfilm-client-template --jq .is_template`. Tell me everything is green and `/new-client` is ready to use.
@@ -102,7 +94,7 @@ Claude asks you, one at a time:
 
 1. **Prospect's full name** — e.g. *Sarah Johnson*
 2. **Meeting day, date, time** — e.g. *Friday, 16 May 2026, 2:30 PM EST*
-3. **Repo name** — Claude suggests `sarah-johnson-opening-scene`; accept or change.
+3. **Repo name** — Claude suggests `sarah-johnson-precall-brochure`; accept or change.
 4. **Intro video path** — wherever the 90-second personal video is on your Mac. Any filename, any common format (`.mp4`, `.mov`, `.m4v`). For example `~/Desktop/sarah-intro.mov` straight off your phone via AirDrop. Or say *skip* to leave the placeholder.
 5. **Anything custom?** — by default Claude uses your template's defaults (the assets and text you committed above). Only answer if you want to override for *this prospect only*.
 
