@@ -105,41 +105,87 @@ For colour overrides, also edit the `:root` block:
 - `--bg-invert: #0a0a0a;` → `--bg-invert: <hex>;`
 - `--ink: #0a0a0a;` → `--ink: <hex>;`
 
-## Step 6 — Wire up the intro video (if provided)
+## Step 6 — Wire up the intro video, and always disarm the dead alert handler
 
-If the user gave a path in Q4:
+The template's `index.html` has a JS click-handler on the intro placeholder that pops an `alert("Replace this placeholder with a Vimeo/YouTube iframe...")`. That's a developer message — never appropriate for a real prospect. **Always remove it**, whether or not an intro video is provided.
 
-```bash
-[ -f "$INTRO_PATH" ] || { echo "Intro file not found, skipping"; }
-EXT="${INTRO_PATH##*.}"
-EXT="$(printf '%s' "$EXT" | tr '[:upper:]' '[:lower:]')"
-cp "$INTRO_PATH" "$TARGET_DIR/assets/intro.$EXT"
-```
-
-Then run this perl one-liner to swap the scene-02 placeholder for a real `<video>` tag and remove the dead alert handler:
+### 6a. Remove the dead alert handler unconditionally
 
 ```bash
-INTRO_EXT="$EXT" perl -i -0777 -pe '
-  my $ext = $ENV{INTRO_EXT};
-  my $replacement =
-    qq{<video src="assets/intro.$ext" controls playsinline preload="metadata" } .
-    qq{id="introVideo" style="width:100%; aspect-ratio:16/9; background:#000; } .
-    qq{border-radius:12px; display:block;">Your browser does not support embedded video.</video>};
-  s~<div class="video-placeholder" id="introVideo">\s*<div class="play-button"></div>\s*<div class="video-caption">[^<]*</div>\s*</div>~$replacement~;
+perl -i -0777 -pe '
   s~\s*// Video placeholder click\s*\n\s*document\.getElementById\(.introVideo.\)\?\.addEventListener\(.click., \(\) => \{[^}]*\}\);~~;
 ' "$TARGET_DIR/index.html"
+```
+
+After this, the placeholder div is inert if no intro is provided — it just sits there as a static frame.
+
+### 6b. If the user gave an intro path in Q4, swap the placeholder for a real video tag
+
+```bash
+[ -f "$INTRO_PATH" ] || { echo "Intro file not found, skipping"; INTRO_PATH=""; }
+if [ -n "$INTRO_PATH" ]; then
+  EXT="${INTRO_PATH##*.}"
+  EXT="$(printf '%s' "$EXT" | tr '[:upper:]' '[:lower:]')"
+  cp "$INTRO_PATH" "$TARGET_DIR/assets/intro.$EXT"
+  INTRO_EXT="$EXT" perl -i -0777 -pe '
+    my $ext = $ENV{INTRO_EXT};
+    my $replacement =
+      qq{<video src="assets/intro.$ext" controls playsinline preload="metadata" } .
+      qq{id="introVideo" style="width:100%; aspect-ratio:16/9; background:#000; } .
+      qq{border-radius:12px; display:block;">Your browser does not support embedded video.</video>};
+    s~<div class="video-placeholder" id="introVideo">\s*<div class="play-button"></div>\s*<div class="video-caption">[^<]*</div>\s*</div>~$replacement~;
+  ' "$TARGET_DIR/index.html"
+fi
 ```
 
 ## Step 7 — Check the studio showreel
 
 ```bash
-[ -f "$TARGET_DIR/assets/showreel.mp4" ] || echo "WARNING: closing scene reel missing"
+[ -f "$TARGET_DIR/assets/showreel.mp4" ] && SHOWREEL_PRESENT=1 || SHOWREEL_PRESENT=0
 ```
 
-If missing, tell the user the closing scene will be a black box and offer:
-- Provide a showreel path for this client site only (one-off, copy as `assets/showreel.mp4` in this new repo)
-- Add it to *the operator's own template* (`$TEMPLATE_REPO`) so every future client site inherits it. The local clone is at `~/Documents/tilletfilm-client-template/`. Drop the file in `assets/showreel.mp4` there, `git add/commit/push`. Then also copy into `$TARGET_DIR/assets/` for this client.
-- Skip
+If `SHOWREEL_PRESENT=1`, nothing to do — every site (including this one) already has a working closing reel. Continue.
+
+If `SHOWREEL_PRESENT=0`, the closing scene falls back to a CSS-animated colour-cut sequence — passable but not a real reel. Ask the user **directly** (plain prose, no AskUserQuestion):
+
+> "Your template doesn't have `assets/showreel.mp4` committed yet, so the closing scene falls back to the CSS animation. The showreel is studio-wide (the same across every prospect), unlike the per-client intro. Two questions:
+>
+> 1. Do you have a showreel file you want to use? If yes, give me the path. If not, say 'skip' — the CSS fallback is fine.
+> 2. (If you provided one) Add it to your template so every future client site inherits it? **Y** = recommended (commit to `$TEMPLATE_REPO`); **N** = only use it for this client site.
+> 3. (If you said Y to #2) Also push it to this just-generated client site too? **Y** = yes, the live URL gets the real reel; **N** = leave this client on the CSS fallback, only future ones get it."
+
+Handle the answers:
+
+```bash
+# 1. The path
+SHOWREEL_PATH="<what they gave you, or empty if 'skip'>"
+
+if [ -n "$SHOWREEL_PATH" ] && [ -f "$SHOWREEL_PATH" ]; then
+  # 2a. Add to template (recommended)
+  if [ "$ADD_TO_TEMPLATE" = "yes" ]; then
+    TEMPLATE_LOCAL="$HOME/Documents/tilletfilm-client-template"
+    cp "$SHOWREEL_PATH" "$TEMPLATE_LOCAL/assets/showreel.mp4"
+    ( cd "$TEMPLATE_LOCAL" && git add assets/showreel.mp4 \
+        && git commit -m "Add studio showreel" \
+        && git push )
+  fi
+
+  # 2b. Either way, optionally retro-fit the just-generated client site
+  if [ "$ADD_TO_THIS_SITE" = "yes" ]; then
+    cp "$SHOWREEL_PATH" "$TARGET_DIR/assets/showreel.mp4"
+    # The git add/commit/push happens in Step 8 below — no need to do it here.
+  fi
+fi
+```
+
+The matrix of what gets the showreel:
+
+| User said | Template updated | This client site updated | Future client sites |
+|---|---|---|---|
+| skip | no | no (CSS fallback) | no (CSS fallback) |
+| path + Y to template + Y to retro | **yes** | **yes** | **yes** |
+| path + Y to template + N to retro | **yes** | no (CSS fallback) | **yes** |
+| path + N to template + N/A | no | **yes** | no (CSS fallback) |
 
 ## Step 8 — Commit and push
 
