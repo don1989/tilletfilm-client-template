@@ -1,18 +1,18 @@
 ---
 name: new-client
-description: Spin up a personalized brochure GitHub repo for one client. Use when the user wants to create a new Opening Scene site for a prospect. Claude asks for the client details, generates the repo from the GitHub template, swaps the text + intro video, pushes, and enables GitHub Pages — all from any folder Claude Code is opened in. No local template clone required.
+description: Spin up a personalized client site GitHub repo for one client. Use when the user wants to create a new Opening Scene site for a prospect. Claude asks for the client details, generates the repo from the GitHub template, swaps the text + intro video, pushes, and enables GitHub Pages — all from any folder Claude Code is opened in. No local template clone required.
 ---
 
 # new-client
 
-You're creating a personalized brochure repo from the `don1989/tilletfilm-poc` GitHub **template repository**. The template is marked as a template on GitHub, so the GitHub API endpoint `POST /repos/{template_owner}/{template_repo}/generate` will create a fresh client repo with all the template files but no commit history.
+You're creating a personalized client site from the `don1989/tilletfilm-client-template` GitHub **template repository**. The template is marked as a template on GitHub, so the GitHub API endpoint `POST /repos/{template_owner}/{template_repo}/generate` will create a fresh client repo with all the template files but no commit history.
 
 This skill works from **any** folder the user has Claude Code opened in — it never relies on a local clone of the template.
 
 Constants you can use throughout:
-- Template source: `don1989/tilletfilm-poc`
-- The operator's GitHub username: read from `gh api user --jq .login`. Brochure repos are always created under his own account — there's no org.
-- Working directory for the new repo: `~/Documents/brochures/<repoName>`
+- Template source: `don1989/tilletfilm-client-template`
+- The operator's GitHub username: read from `gh api user --jq .login`. Client-site repos are always created under his own account — there's no org.
+- Working directory for the new repo: `~/Documents/client-sites/<repoName>`
 
 ## Step 0 — Determine the owner
 
@@ -49,23 +49,23 @@ If any of these fail, the installer wasn't run. Tell the user to paste the insta
 ## Step 3 — Generate the new repo from the template
 
 ```bash
-gh api -X POST repos/don1989/tilletfilm-poc/generate \
+gh api -X POST repos/don1989/tilletfilm-client-template/generate \
   -f owner="$OWNER" \
   -f name="$REPO_NAME" \
-  -f description="Opening Scene brochure for $CLIENT_FULL" \
+  -f description="Opening Scene client site for $CLIENT_FULL" \
   -F include_all_branches=false \
   -F private=false
 ```
 
 This creates `$OWNER/$REPO_NAME` on GitHub with the template's files and a single initial commit. There's a brief moment where the repo exists but files aren't yet ready to clone — wait 3 seconds, then continue.
 
-If this call returns `404`, the template flag isn't set on `don1989/tilletfilm-poc`. Tell the user to toggle it at `https://github.com/don1989/tilletfilm-poc/settings` and stop.
+If this call returns `404`, the template flag isn't set on `don1989/tilletfilm-client-template`. Tell the user to toggle it at `https://github.com/don1989/tilletfilm-client-template/settings` and stop.
 
 ## Step 4 — Clone the generated repo locally for editing
 
 ```bash
-mkdir -p ~/Documents/brochures
-TARGET_DIR="$HOME/Documents/brochures/$REPO_NAME"
+mkdir -p ~/Documents/client-sites
+TARGET_DIR="$HOME/Documents/client-sites/$REPO_NAME"
 gh repo clone "$OWNER/$REPO_NAME" "$TARGET_DIR"
 cd "$TARGET_DIR"
 ```
@@ -126,8 +126,8 @@ INTRO_EXT="$EXT" perl -i -0777 -pe '
 ```
 
 If missing, tell the user the closing scene will be a black box and offer:
-- Provide a showreel path for this brochure (one-off, copy as `assets/showreel.mp4`)
-- Add it to the template repo for all future clients (commit to `don1989/tilletfilm-poc:main` — needs push permission)
+- Provide a showreel path for this client site (one-off, copy as `assets/showreel.mp4`)
+- Add it to the template repo for all future clients (commit to `don1989/tilletfilm-client-template:main` — needs push permission)
 - Skip
 
 ## Step 8 — Commit and push
@@ -158,12 +158,12 @@ Tell the user:
 ## How assets work (for context if user asks)
 
 Two layers:
-- **Studio-wide** (testimonial, work films, showreel) — live in the template repo's `assets/` and are inherited by every generated brochure automatically. Update them once in `don1989/tilletfilm-poc` and every future client inherits the new version.
+- **Studio-wide** (testimonial, work films, showreel) — live in the template repo's `assets/` and are inherited by every generated client site automatically. Update them once in `don1989/tilletfilm-client-template` and every future client inherits the new version.
 - **Per-client** — just the intro video. The only file you ask the user for.
 
 ## Don't
 
 - Don't try to run this from a local template clone — there isn't one. Use the GitHub API.
-- Don't push to `don1989/tilletfilm-poc` as part of a per-client run (template stays clean).
+- Don't push to `don1989/tilletfilm-client-template` as part of a per-client run (template stays clean).
 - Don't proceed past Step 2 if `gh auth status` fails — stop and tell the user to re-run the installer.
 - Don't change the repo visibility to private — Pages only works on public repos with a free plan.

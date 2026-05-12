@@ -1,4 +1,4 @@
-# Setup — make a new client brochure in 2 minutes
+# Setup — make a new client site in 2 minutes
 
 This is the operator's guide. You'll never need to open Terminal — everything runs inside Claude Code, which you already have.
 
@@ -9,7 +9,7 @@ This is the operator's guide. You'll never need to open Terminal — everything 
 Open Claude Code. Paste this single prompt and let it run:
 
 ````
-Install the Tillett Film brochure-maker for me. You should:
+Install the Tillett Film client-site maker for me. You should:
 
 1. If `brew` (Homebrew) isn't installed on this Mac, install it from https://brew.sh/. This step needs my Mac password — you'll be prompted in the terminal pane, and I'll type it in.
 
@@ -20,7 +20,7 @@ Install the Tillett Film brochure-maker for me. You should:
 4. Create the directory `~/.claude/skills/new-client/` (mkdir -p).
 
 5. Download the skill file from
-   https://raw.githubusercontent.com/don1989/tilletfilm-poc/main/.claude/skills/new-client/SKILL.md
+   https://raw.githubusercontent.com/don1989/tilletfilm-client-template/main/.claude/skills/new-client/SKILL.md
    and save it as `~/.claude/skills/new-client/SKILL.md`. (Use `curl -fsSL <url> -o <path>`.)
 
 6. Pre-approve the Bash commands the skill will need so I don't have to click Allow on every run. In `~/.claude/settings.json`, merge in this `permissions.allow` block (preserve any existing rules):
@@ -74,8 +74,8 @@ Claude asks you, one at a time:
 5. **Anything custom?** — by default Claude uses the studio's standard name, email, director, and brand colours. Only answer if you want to override.
 
 Then Claude:
-- Generates a fresh repo under your GitHub org via the template-generate API
-- Clones it locally to `~/Documents/brochures/<repo-name>/` for editing
+- Generates a fresh repo under your GitHub account via the template-generate API
+- Clones it locally to `~/Documents/client-sites/<repo-name>/` for editing
 - Swaps every name and date in `index.html`
 - Copies your intro video in and wires up scene 02
 - Commits + pushes
@@ -84,7 +84,7 @@ Then Claude:
 
 Send the URL to your prospect. Allow ~1 minute on first deploy.
 
-> All brochure repos are created **public** — free GitHub Pages only serves public repos. The URL has no inbound links, so it's only discoverable by people you send it to.
+> All client-site repos are created **public** — free GitHub Pages only serves public repos. The URL has no inbound links, so it's only discoverable by people you send it to.
 
 ---
 
@@ -92,14 +92,14 @@ Send the URL to your prospect. Allow ~1 minute on first deploy.
 
 Two layers:
 
-- **Studio-wide** (testimonial, work films, showreel) — live in the template repo and every new brochure inherits them automatically.
+- **Studio-wide** (testimonial, work films, showreel) — live in the template repo and every new client site inherits them automatically.
 - **Per-client** — just the intro video. The only file Claude asks you for.
 
 If you ever need to update the studio testimonial, a work film, or the showreel, ask Claude in any session:
 
 > "Update the studio showreel in the template — use this file: `~/Desktop/new-showreel.mp4`"
 
-Claude will commit the change to the template repo. Every future brochure inherits it.
+Claude will commit the change to the template repo. Every future client site inherits it.
 
 ---
 
@@ -111,6 +111,6 @@ Claude will commit the change to the template repo. Every future brochure inheri
 
 **Intro video doesn't play on the client's site** — most likely the file path you gave Claude was wrong, or the file is in an obscure format. Ask Claude to re-run with a different file.
 
-**Closing-scene reel is a black box** — the template is missing `assets/showreel.mp4`. Ask Claude: *"Add this file as the studio showreel: `~/Desktop/showreel.mp4`"* — it'll commit to the template and every future brochure will have it.
+**Closing-scene reel is a black box** — the template is missing `assets/showreel.mp4`. Ask Claude: *"Add this file as the studio showreel: `~/Desktop/showreel.mp4`"* — it'll commit to the template and every future client site will have it.
 
-**404 from the generate API** — the template repo isn't marked as a template on GitHub. Toggle it at <https://github.com/don1989/tilletfilm-poc/settings> → check "Template repository".
+**404 from the generate API** — the template repo isn't marked as a template on GitHub. Toggle it at <https://github.com/don1989/tilletfilm-client-template/settings> → check "Template repository".
