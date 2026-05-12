@@ -94,7 +94,7 @@ Claude asks you, one at a time:
 
 1. **Prospect's full name** — e.g. *Sarah Johnson*
 2. **Meeting day, date, time** — e.g. *Friday, 16 May 2026, 2:30 PM EST*
-3. **Repo name** — Claude suggests `sarah-johnson-opening-scene`; accept or change.
+3. **Repo name** — Claude suggests `sarah-johnson-precall-brochure`; accept or change.
 4. **Intro video path** — wherever the 90-second personal video is on your Mac. Any filename, any common format (`.mp4`, `.mov`, `.m4v`). For example `~/Desktop/sarah-intro.mov` straight off your phone via AirDrop. Or say *skip* to leave the placeholder.
 5. **Anything custom?** — by default Claude uses your template's defaults (the assets and text you committed above). Only answer if you want to override for *this prospect only*.
 

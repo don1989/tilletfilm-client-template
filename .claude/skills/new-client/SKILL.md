@@ -36,19 +36,18 @@ If this returns `false` or the call 404s, the install didn't complete properly. 
 
 ## Step 1 — Ask the per-client details
 
-Use `AskUserQuestion`. Group sensibly:
+Most of these are free-text (names, dates, file paths), so **do NOT use `AskUserQuestion`** — that tool is designed for multiple-choice and forces the user through an "Other → type text" detour for every answer. Instead, just write the question list as a plain assistant message and let the user reply with all the answers at once. A single message like this is ideal:
 
-**Q1 — Prospect's full name.** Free-text (e.g. "Sarah Johnson"). You split on the first space for first/last.
+> "To generate the client site, I need:
+> 1. **Prospect's full name** — e.g. "Sarah Johnson"
+> 2. **Meeting day, date, time** — e.g. "Friday, 16 May 2026, 2:30 PM EST"
+> 3. **Repo name** — I'll suggest `<firstname>-<lastname>-precall-brochure` based on the name; confirm or override.
+> 4. **Intro video path** on this Mac — e.g. `~/Desktop/sarah-intro.mov`, or say "skip"
+> 5. **Studio/color overrides** — default is to keep the template's defaults. Say "skip" or list what to change."
 
-**Q2 — Meeting day, date, time.** One free-text question — e.g. `Friday, 16 May 2026, 2:30 PM EST`. Parse into the three sub-values.
+Parse the reply, then echo a one-line plan back and wait for confirmation before doing anything destructive:
 
-**Q3 — Repo name.** Suggest `<firstname>-<lastname>-opening-scene` (lowercased, hyphenated). Confirm or override.
-
-**Q4 — Intro video.** Path to the personal 90-second video on this Mac (e.g. `~/Desktop/sarah-intro.mov`). Accept any common format (`.mp4`, `.mov`, `.m4v`, `.webm`). Or "skip".
-
-**Q5 — Studio / color overrides (optional).** Default to skip. Only follow up if the user wants non-default studio name, email, director, or brand colours.
-
-Echo a one-line plan and wait for confirmation before doing anything destructive.
+> "Plan: generate `<owner>/<repo-name>` for `<full-name>`, meeting `<day, date, time>`, intro from `<path>`, defaults elsewhere. Proceed?"
 
 ## Step 2 — Verify prerequisites (mostly a no-op after install)
 
