@@ -5,7 +5,7 @@ description: Spin up a personalized client site GitHub repo for one prospect. Us
 
 # new-client
 
-You're creating a personalized client site from the operator's own GitHub **template repository** at `<their-username>/tilletfilm-client-template`. That template is a copy of `don1989/tilletfilm-client-template` that the operator made during install — they own it, can customize the studio-wide assets (showreel, work films, testimonials, brand text/colours) however they like, and every new client site is generated fresh from it.
+You're creating a personalized client site from the operator's own GitHub **template repository** at `<their-username>/tillettfilm-client-template`. That template is a copy of `don1989/tillettfilm-client-template` that the operator made during install — they own it, can customize the studio-wide assets (showreel, work films, testimonials, brand text/colours) however they like, and every new client site is generated fresh from it.
 
 The GitHub API endpoint `POST /repos/{template_owner}/{template_repo}/generate` creates a fresh client repo with all the template files but no commit history. The template must be marked as a template on GitHub (the installer does this).
 
@@ -13,15 +13,15 @@ This skill works from **any** folder Claude Code is opened in — it never relie
 
 Constants you can use throughout:
 - The operator's GitHub username: read from `gh api user --jq .login`.
-- Template source: `$OWNER/tilletfilm-client-template` — *the operator's* template, not the upstream one. Convention-based: the installer always creates it with this name.
+- Template source: `$OWNER/tillettfilm-client-template` — *the operator's* template, not the upstream one. Convention-based: the installer always creates it with this name.
 - Working directory for new client sites: `~/Documents/client-sites/<repoName>`
-- Operator's local template clone (for context): `~/Documents/tilletfilm-client-template/` — they edit studio assets there.
+- Operator's local template clone (for context): `~/Documents/tillettfilm-client-template/` — they edit studio assets there.
 
 ## Step 0 — Determine the owner and template source
 
 ```bash
 OWNER=$(gh api user --jq .login)
-TEMPLATE_REPO="$OWNER/tilletfilm-client-template"
+TEMPLATE_REPO="$OWNER/tillettfilm-client-template"
 ```
 
 If `gh api user` fails, `gh` isn't authenticated — tell the user to re-run the installer prompt and stop.
@@ -163,7 +163,7 @@ SHOWREEL_PATH="<what they gave you, or empty if 'skip'>"
 if [ -n "$SHOWREEL_PATH" ] && [ -f "$SHOWREEL_PATH" ]; then
   # 2a. Add to template (recommended)
   if [ "$ADD_TO_TEMPLATE" = "yes" ]; then
-    TEMPLATE_LOCAL="$HOME/Documents/tilletfilm-client-template"
+    TEMPLATE_LOCAL="$HOME/Documents/tillettfilm-client-template"
     cp "$SHOWREEL_PATH" "$TEMPLATE_LOCAL/assets/showreel.mp4"
     ( cd "$TEMPLATE_LOCAL" && git add assets/showreel.mp4 \
         && git commit -m "Add studio showreel" \
@@ -215,12 +215,12 @@ Tell the user:
 ## How assets work (for context if user asks)
 
 Two layers:
-- **Studio-wide** (testimonial, work films, showreel) — live in the template repo's `assets/` and are inherited by every generated client site automatically. Update them once in `don1989/tilletfilm-client-template` and every future client inherits the new version.
+- **Studio-wide** (testimonial, work films, showreel) — live in the template repo's `assets/` and are inherited by every generated client site automatically. Update them once in `don1989/tillettfilm-client-template` and every future client inherits the new version.
 - **Per-client** — just the intro video. The only file you ask the user for.
 
 ## Don't
 
 - Don't try to run this from a local template clone — there isn't one. Use the GitHub API.
-- Don't push to `don1989/tilletfilm-client-template` as part of a per-client run (template stays clean).
+- Don't push to `don1989/tillettfilm-client-template` as part of a per-client run (template stays clean).
 - Don't proceed past Step 2 if `gh auth status` fails — stop and tell the user to re-run the installer.
 - Don't change the repo visibility to private — Pages only works on public repos with a free plan.
